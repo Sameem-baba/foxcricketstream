@@ -1,36 +1,150 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏏 Fox Cricket Stream
 
-## Getting Started
+A high-performance, self-hosted live streaming platform built with **Next.js**, **Express**, and **FFmpeg**.  
+This project ingests a live stream source (IPTV/HLS), transcodes or relays it in real-time, and serves it to a premium web interface.
 
-First, run the development server:
+---
 
+## ✨ Features
+
+- **Live HLS Streaming:** Converts live input streams into browser-compatible HLS (`.m3u8`) format.  
+- **Premium UI:** Cinematic, dark-themed player interface inspired by top-tier streaming services.  
+- **Video.js Player:** Robust playback support with a custom Netflix-style centered play button.  
+- **Auto-Recovery:** Automatically restarts FFmpeg if the stream drops or the source disconnects.  
+- **Low Latency / High Quality Modes:** Tunable FFmpeg presets for performance vs quality.  
+- **Responsive Design:** Optimized for both desktop and mobile devices.
+
+---
+
+## 🛠️ Tech Stack
+
+**Frontend**
+- Next.js 16 (React 19)
+- Tailwind CSS
+- Video.js
+- Lucide Icons
+
+**Backend**
+- Node.js (Express)
+- FFmpeg (spawned as a child process)
+
+**Streaming Protocol**
+- HLS (HTTP Live Streaming)
+
+---
+
+## 🚀 Prerequisites
+
+Ensure the following are installed on your system:
+
+1. **Node.js** (v18 or higher)
+2. **FFmpeg** (must be available in PATH)
+
+### FFmpeg Installation
+- **Windows:** Download from https://www.gyan.dev/ffmpeg/builds/ and add `bin` to Environment Variables  
+- **macOS:** `brew install ffmpeg`  
+- **Linux:** `sudo apt install ffmpeg`  
+
+Verify installation:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+ffmpeg -version
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📦 Installation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Navigate to Project Directory
+```bash
+cd foxcricketstream
+```
 
-## Learn More
+### 2. Install Frontend Dependencies
+```bash
+npm install
+# or
+yarn install
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 3. Install Backend Dependencies
+```bash
+npm install express cors
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🏃‍♂️ Running the Project
 
-## Deploy on Vercel
+You must run **both** the backend and frontend simultaneously.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 1. Start the Stream Server (Backend)
+```bash
+node stream-server.js
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Port:** 8080  
+- **Logs:**  
+  - 🚀 Starting High-Quality Sports Engine...
+  - 📥 Fetching live data...
+
+### 2. Start the Web App (Frontend)
+Open a new terminal:
+```bash
+npm run dev
+```
+
+- **Port:** 3000  
+- **URL:** http://localhost:3000
+
+---
+
+## ⚙️ Configuration
+
+### Change the Source Stream
+Edit `stream-server.js`:
+
+```js
+const SOURCE_URL = "http://YOUR_NEW_IPTV_URL_HERE";
+```
+
+### Quality vs Performance Tuning
+
+Inside `startFFmpeg()`:
+
+**Low CPU / Low Latency**
+- `-preset ultrafast`
+- `-vf scale=1280:720`
+
+**High Quality (Sports Optimized)**
+- `-preset superfast`
+- `-b:v 4500k`
+- `-vf yadif,scale=1280:720`
+
+> Note: High-quality presets require a capable CPU.
+
+---
+
+## ⚠️ Troubleshooting
+
+### Black Screen / Infinite Loading
+- Source may be offline or geo-blocked
+- If audio plays but video is black, source is likely **interlaced (1080i)**  
+  → Use transcoding with `yadif` filter
+
+### Buffering Issues
+- CPU overload during encoding
+- Reduce bitrate (e.g., `4500k → 2500k`)
+- Switch preset to `ultrafast`
+
+### FFmpeg Not Found
+```bash
+ffmpeg -version
+```
+If not found, reinstall FFmpeg and ensure PATH is set correctly.
+
+---
+
+## 📄 License
+
+This project is intended for **educational purposes only**.  
+You are responsible for ensuring you have the legal rights to stream any content used with this platform.

@@ -1,91 +1,103 @@
 "use client";
 
 import React, { useEffect, useRef } from 'react';
-import Hls from 'hls.js';
+import videojs from 'video.js';
+import 'video.js/dist/video-js.css'; // Import the default Premium styles
+import Player from 'video.js/dist/types/player';
 
 export default function StreamPlayer() {
-    const videoRef = useRef<HTMLVideoElement>(null);
+    const videoRef = useRef<HTMLDivElement>(null);
+    const playerRef = useRef<Player | null>(null);
 
+    // Configuration
+    const streamUrl = "http://localhost:8080/live/stream.m3u8";
 
     useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
+        // Make sure the player is only initialized once
+        if (!playerRef.current) {
+            const videoElement = document.createElement("video-js");
 
-        // Point to your local stream
-        const streamUrl = "http://localhost:8080/live/stream.m3u8";
+            // Add 'vjs-big-play-centered' to center the play button (Netflix style)
+            videoElement.classList.add('vjs-big-play-centered');
 
-        if (Hls.isSupported()) {
-            const hls = new Hls({
-                enableWorker: true,
+            // Append the element to our div
+            if (videoRef.current) {
+                videoRef.current.appendChild(videoElement);
+            }
 
-                // 1. DISABLE Low Latency (Crucial for stitched streams)
-                lowLatencyMode: false,
-
-                // 2. Safety Buffer: Wait for 3 segments (3 * 2s = 6s delay) before playing
-                // This gives the backend time to stitch the files without the user noticing.
-                liveSyncDurationCount: 3,
-
-                // 3. Keep a healthy buffer in memory
-                maxBufferLength: 30,
-                maxMaxBufferLength: 60,
-
-                // 4. Be patient with network requests
-                manifestLoadingTimeOut: 10000,
-                manifestLoadingMaxRetry: 5,
-                levelLoadingTimeOut: 10000,
-                fragLoadingTimeOut: 20000,
-            });
-
-            hls.loadSource(streamUrl);
-            hls.attachMedia(video);
-
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                // Try to play, but mute first to allow autoplay policies
-                video.muted = true;
-                video.play().catch(e => console.log("Autoplay blocked:", e));
-            });
-
-            // Error Handling: Auto-recover if it stalls
-            hls.on(Hls.Events.ERROR, (event, data) => {
-                if (data.fatal) {
-                    switch (data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR:
-                            console.log("Network error, recovering...");
-                            hls.startLoad();
-                            break;
-                        case Hls.ErrorTypes.MEDIA_ERROR:
-                            console.log("Media error, recovering...");
-                            hls.recoverMediaError();
-                            break;
-                        default:
-                            hls.destroy();
-                            break;
+            // Initialize the Video.js player
+            const player = (playerRef.current = videojs(videoElement, {
+                autoplay: 'muted', // Auto-play muted (browser policy friendly)
+                controls: true,
+                responsive: true,
+                fluid: true, // Adapts to container size
+                sources: [{
+                    src: streamUrl,
+                    type: 'application/x-mpegURL' // This tells it it's an HLS stream
+                }],
+                html5: {
+                    vhs: {
+                        // Low latency settings for HLS
+                        overrideNative: true,
+                        enableLowLatency: true,
                     }
                 }
+            }, () => {
+                console.log('🎬 Player is ready');
+            }));
+
+            // Error handling
+            player.on('error', () => {
+                console.log('⚠️ Stream error, trying to recover...');
+                player.src({ src: streamUrl, type: 'application/x-mpegURL' });
             });
 
-            // Cleanup
-            return () => {
-                hls.destroy();
-            };
-
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            // Safari Native HLS Fallback
-            video.src = streamUrl;
-            video.addEventListener('loadedmetadata', () => {
-                video.play();
-            });
+        } else {
+            // If player already exists, just update the URL if it changed
+            const player = playerRef.current;
+            player.src({ src: streamUrl, type: 'application/x-mpegURL' });
         }
+    }, [streamUrl]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        const player = playerRef.current;
+
+        return () => {
+            if (player && !player.isDisposed()) {
+                player.dispose();
+                playerRef.current = null;
+            }
+        };
     }, []);
 
     return (
-        <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">
-            <video
-                ref={videoRef}
-                className="h-full w-full object-contain"
-                controls
-                muted // Muted needed for autoplay
-            />
+        <div className="w-full max-w-5xl mx-auto rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-black">
+            <div data-vjs-player>
+                {/* The player will attach itself here */}
+                <div ref={videoRef} />
+            </div>
+
+            {/* Custom CSS to make it look extra premium (Dark/Red Theme) */}
+            <style jsx global>{`
+        .video-js .vjs-big-play-button {
+          background-color: rgba(220, 38, 38, 0.9); /* Red color */
+          border: none;
+          border-radius: 50%;
+          width: 80px;
+          height: 80px;
+          line-height: 80px;
+          font-size: 50px;
+          margin-left: -40px; /* Center alignment fix */
+          margin-top: -40px;
+        }
+        .video-js .vjs-control-bar {
+          background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent black */
+        }
+        .video-js .vjs-slider {
+          background-color: rgba(255, 255, 255, 0.2);
+        }
+      `}</style>
         </div>
     );
 }

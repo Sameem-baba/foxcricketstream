@@ -2,15 +2,14 @@
 
 import { useState } from 'react';
 import StreamPlayer from '@/components/StreamPlayer';
-import { BookOpen, Users, GraduationCap } from 'lucide-react';
+import { BookOpen, User } from 'lucide-react';
 
 const CHANNELS = [
   {
     id: 'live-1',
-    title: 'Fox Cricket',
-    instructor: '',
-    url: '/api/stream/active',
-    category: 'Live Feed'
+    title: 'Fox Cricket Main Event',
+    category: 'Sports',
+    viewers: '12.4k'
   }
 ];
 
@@ -18,67 +17,58 @@ export default function Home() {
   const [activeChannel, setActiveChannel] = useState(CHANNELS[0]);
 
   return (
-    <main className="min-h-screen bg-[#0D0D0D] text-white pt-24 pb-12 px-6">
-      <div className="mx-auto max-w-5xl">
+    <main className="min-h-screen bg-[#0f0f0f] text-white flex flex-col items-center py-10">
 
-        {/* Header Metadata */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="w-full max-w-6xl px-6">
+
+        {/* The Player Section */}
+        <div className="relative group rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+          <StreamPlayer key={activeChannel.id} />
+
+          {/* Live Badge Overlay */}
+          <div className="absolute top-6 left-6 bg-red-600/90 backdrop-blur-md px-4 py-1.5 rounded-md text-sm font-bold uppercase tracking-wider flex items-center gap-2 shadow-lg z-10 animate-pulse pointer-events-none">
+            <span className="w-2.5 h-2.5 bg-white rounded-full"></span>
+            LIVE
+          </div>
+        </div>
+
+        {/* Video Metadata */}
+        <div className="mt-8 flex items-start justify-between">
           <div>
-            <h2 className="text-3xl font-semibold tracking-tight text-zinc-100">
-              {activeChannel.title}
-            </h2>
-            <div className="mt-2 flex items-center gap-4 text-zinc-400 text-sm">
-              {/* <span className="flex items-center gap-1.5">
-                <GraduationCap size={16} /> {activeChannel.instructor}
-              </span> */}
-              <span className="flex items-center gap-1.5">
-                <BookOpen size={16} /> {activeChannel.category}
-              </span>
+            <h1 className="text-3xl font-bold text-white mb-2">{activeChannel.title}</h1>
+            <div className="flex items-center gap-4 text-zinc-400 text-sm">
+              <span className="text-red-500 font-semibold px-2 py-0.5 bg-red-500/10 rounded">{activeChannel.category}</span>
+              <span>•</span>
+              <span>{activeChannel.viewers} watching</span>
+              <span>•</span>
+              <span className="text-green-400">Excellent Connection</span>
             </div>
           </div>
 
-          {/* <div className="flex items-center gap-2 text-zinc-500 text-sm bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
-            <Users size={16} />
-            <span>1,248 attending</span>
-          </div> */}
+          {/* Simple Share Button */}
+          <button className="p-3 bg-zinc-800 hover:bg-zinc-700 rounded-full transition text-zinc-400 hover:text-white">
+            <BookOpen size={20} />
+          </button>
         </div>
 
-        {/* The Player Component */}
-        <StreamPlayer
-          key={activeChannel.id} // Forces re-mount when channel changes
-        />
-
-        {/* Channel Selection Grid */}
-        <div className="mt-12">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-6">
-            Available Seminars
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {CHANNELS.map((channel) => (
-              <button
-                key={channel.id}
-                onClick={() => setActiveChannel(channel)}
-                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${activeChannel.id === channel.id
-                  ? "bg-indigo-600/10 border-indigo-500/50 ring-1 ring-indigo-500/50"
-                  : "bg-zinc-900/50 border-white/5 hover:bg-white/5"
-                  }`}
-              >
-                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-tighter mb-1">
-                  {channel.category}
-                </span>
-                <span className="font-medium text-zinc-200">{channel.title}</span>
-                <span className="text-xs text-zinc-500 mt-1">{channel.instructor}</span>
-              </button>
+        {/* Channel List (Simplified) */}
+        <div className="mt-12 pt-8 border-t border-white/5">
+          <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-6">Up Next</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {CHANNELS.map(ch => (
+              <div key={ch.id} className="bg-zinc-900/30 hover:bg-zinc-900 p-4 rounded-xl border border-white/5 cursor-pointer transition flex gap-4 items-center group">
+                <div className="w-12 h-12 bg-zinc-800 group-hover:bg-red-600/20 text-zinc-500 group-hover:text-red-500 rounded-lg flex items-center justify-center transition-colors">
+                  <User size={20} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-zinc-200 group-hover:text-white transition">{ch.title}</h4>
+                  <p className="text-xs text-zinc-500">Live now</p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
 
-        {/* Minimal Footer */}
-        <footer className="mt-20 border-t border-white/5 pt-8 text-center">
-          <p className="text-[10px] text-zinc-600 tracking-[0.2em] uppercase">
-            Academic Streaming Platform • Built with Next.js & HLS.js
-          </p>
-        </footer>
       </div>
     </main>
   );

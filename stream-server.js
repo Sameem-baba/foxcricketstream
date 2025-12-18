@@ -21,37 +21,62 @@ if (!fs.existsSync(STREAM_DIR)) {
 
 let ffmpegProcess = null;
 
-// 1. Start FFmpeg (Listening for piped input)
 const startFFmpeg = () => {
-    console.log('🚀 Starting FFmpeg Stream Engine...');
+    console.log('🚀 Starting High-Quality Sports Engine...');
 
-    ffmpegProcess = spawn('ffmpeg', [
+    const ffmpegArgs = [
         '-re',
         '-i', 'pipe:0',
+
+        // --- VIDEO SETTINGS (High Quality) ---
         '-c:v', 'libx264',
-        '-preset', 'ultrafast',
+
+        // 1. Preset: 'superfast' gives better quality than 'ultrafast' without melting CPU
+        '-preset', 'superfast',
         '-tune', 'zerolatency',
+
+        // 2. Filter: 'yadif' deinterlaces (smooths motion), 'scale' keeps it 720p
+        // Note: If this lags, remove "yadif," and just use "scale=1280:720"
+        '-vf', 'yadif,scale=1280:720',
+
+        // 3. Bitrate: 4500k is great for 720p 60fps sports
+        '-b:v', '4500k',
+        '-maxrate', '5000k',
+        '-bufsize', '10000k',
+        '-profile:v', 'main',
+
+        // --- AUDIO SETTINGS ---
         '-c:a', 'aac',
         '-ar', '44100',
+        '-b:a', '192k', // Higher audio quality
+
+        // --- HLS OUTPUT ---
         '-f', 'hls',
-        '-hls_time', '2',
-        '-hls_list_size', '6',
+        '-hls_time', '3',
+        '-hls_list_size', '5',
         '-hls_flags', 'delete_segments+append_list',
-        '-g', '30',
-        '-sc_threshold', '0',
+
         path.join(STREAM_DIR, 'stream.m3u8')
-    ]);
+    ];
+
+    ffmpegProcess = spawn('ffmpeg', ffmpegArgs);
+
+    ffmpegProcess.stderr.on('data', (data) => {
+        // Log CPU speed once in a while to ensure we aren't lagging
+        const msg = data.toString();
+        if (msg.includes('speed=')) {
+            // console.log(msg.match(/speed=.*?x/)[0]); // Uncomment to check speed
+        }
+    });
 
     ffmpegProcess.on('close', (code) => {
         console.log(`⚠️ FFmpeg died (Code ${code}). Restarting engine...`);
         setTimeout(startFFmpeg, 1000);
     });
 
-    // Start fetching data to feed into FFmpeg
     fetchAndPipe(SOURCE_URL);
 };
 
-// 2. Fetch Data and Feed FFmpeg
 const fetchAndPipe = (url) => {
     console.log(`📥 Fetching live data...`);
 
@@ -64,23 +89,17 @@ const fetchAndPipe = (url) => {
     };
 
     const req = http.get(url, options, (res) => {
-        // Handle Redirects (302)
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-            console.log(`🔀 Following redirect...`);
+            console.log(`🔀 Redirecting...`);
             return fetchAndPipe(res.headers.location);
         }
 
-        // Pipe data into FFmpeg
-        // { end: false } is CRITICAL. It keeps FFmpeg alive when this request finishes.
         res.pipe(ffmpegProcess.stdin, { end: false });
 
-        // When this chunk ends, fetch the next one immediately
         res.on('end', () => {
-            console.log('🔄 Chunk finished. Reconnecting for more data...');
-            // Small delay prevents hammering the server if it closes too fast
+            console.log('🔄 Reconnecting source...');
             setTimeout(() => fetchAndPipe(SOURCE_URL), 500);
         });
-
     });
 
     req.on('error', (err) => {
@@ -89,18 +108,15 @@ const fetchAndPipe = (url) => {
     });
 };
 
-// 3. Serve the Files
 app.use('/live', express.static(STREAM_DIR));
 
 app.listen(PORT, () => {
     console.log(`📺 Stream Server running at http://localhost:${PORT}`);
-    console.log(`🔗 HLS Playlist: http://localhost:${PORT}/live/stream.m3u8`);
+    console.log(`🔗 Playlist: http://localhost:${PORT}/live/stream.m3u8`);
 
-    // Clean up old files on start
     if (fs.existsSync(STREAM_DIR)) {
         fs.rmSync(STREAM_DIR, { recursive: true, force: true });
         fs.mkdirSync(STREAM_DIR);
     }
-
     startFFmpeg();
 });
